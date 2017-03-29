@@ -194,12 +194,10 @@ vda/vda
 vda/vdad
 /win_build/*.sdf
 
-# OS-specific files
-.DS_Store
-
+# local executables
 sched/genefer_validator
 sched/genefer_assimilator
-sched/script_assimilator
-sched/script_validator
 sched/makefile_vt
-sched/validator_test
+
+# OS-specific files
+.DS_Store
