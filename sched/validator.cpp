@@ -259,28 +259,39 @@ int handle_wu(
             transition_time = IMMEDIATE;
 
             DB_HOST host;
-            retval = host.lookup_id(result.hostid);
-            if (retval) {
-                log_messages.printf(MSG_CRITICAL,
-                    "[RESULT#%lu] lookup of host %lu failed: %s\n",
-                    result.id, result.hostid, boincerror(retval)
-                );
-                continue;
+            if (result.hostid)
+            {
+                retval = host.lookup_id(result.hostid);
+                if (retval) {
+                    log_messages.printf(MSG_CRITICAL,
+                        "[RESULT#%lu] lookup of host %lu failed: %s\n",
+                        result.id, result.hostid, boincerror(retval)
+                    );
+                    continue;
+                }
             }
+            else
+                host.id = 0;
             HOST host_initial = host;
 
             bool update_hav = false;
             DB_HOST_APP_VERSION hav;
-            retval = hav_lookup(hav, result.hostid,
-                generalized_app_version_id(result.app_version_id, result.appid)
-            );
-            if (retval) {
-                log_messages.printf(MSG_CRITICAL,
-                    "[RESULT#%lu %s] hav_lookup returned %d\n",
-                    result.id, result.name, retval
+            if (result.hostid)
+            {
+                retval = hav_lookup(hav, result.hostid,
+                    generalized_app_version_id(result.app_version_id, result.appid)
                 );
-                hav.host_id = 0;
+                if (retval) {
+                    log_messages.printf(MSG_CRITICAL,
+                        "[RESULT#%lu %s] hav_lookup returned %d\n",
+                        result.id, result.name, retval
+                    );
+                    hav.host_id = 0;
+                }
             }
+            else
+                hav.host_id = 0;
+
             DB_HOST_APP_VERSION hav_orig = hav;
             vector<DB_HOST_APP_VERSION> havv;
             havv.push_back(hav);
@@ -294,6 +305,10 @@ int handle_wu(
                     "[RESULT#%lu %s] pair_check() matched: setting result to valid\n",
                     result.id, result.name
                 );
+
+                if (result.hostid == 0)  // No more processing
+                    break;
+
                 retval = is_valid(host, result, wu, havv[0]);
                 if (retval) {
                     log_messages.printf(MSG_NORMAL,
@@ -323,7 +338,10 @@ int handle_wu(
                     "[RESULT#%lu %s] pair_check() didn't match: setting result to invalid\n",
                     result.id, result.name
                 );
+                if (result.hostid == 0)  // No more processing
+                    break;
                 is_invalid(havv[0]);
+                break;
             }
             if (hav.host_id && update_hav) {
                 if (dry_run) {
@@ -343,7 +361,8 @@ int handle_wu(
                     }
                 }
             }
-            host.update_diff_validator(host_initial);
+            if (host.id)
+                host.update_diff_validator(host_initial);
             if (update_result) {
                 log_messages.printf(MSG_NORMAL,
                     "[RESULT#%lu %s] granted_credit %f\n",
@@ -387,12 +406,17 @@ int handle_wu(
 
             viable_results.push_back(result);
             DB_HOST_APP_VERSION hav;
-            retval = hav_lookup(hav, result.hostid,
-                generalized_app_version_id(result.app_version_id, result.appid)
-            );
-            if (retval) {
-                hav.host_id=0;   // flag that it's missing
+            if (result.hostid)
+            {
+                retval = hav_lookup(hav, result.hostid,
+                    generalized_app_version_id(result.app_version_id, result.appid)
+                );
+                if (retval) {
+                    hav.host_id=0;   // flag that it's missing
+                }
             }
+            else
+                hav.host_id = 0;
             host_app_versions.push_back(hav);
             host_app_versions_orig.push_back(hav);
         }
@@ -510,14 +534,19 @@ int handle_wu(
                 switch (result.validate_state) {
                 case VALIDATE_STATE_VALID:
                 case VALIDATE_STATE_INVALID:
-                    retval = host.lookup_id(result.hostid);
-                    if (retval) {
-                        log_messages.printf(MSG_CRITICAL,
-                            "[RESULT#%lu] lookup of host %lu: %s\n",
-                            result.id, result.hostid, boincerror(retval)
-                        );
-                        continue;
+                    if (result.hostid)
+                    {
+                        retval = host.lookup_id(result.hostid);
+                        if (retval) {
+                            log_messages.printf(MSG_CRITICAL,
+                                "[RESULT#%lu] lookup of host %lu: %s\n",
+                                result.id, result.hostid, boincerror(retval)
+                            );
+                            continue;
+                        }
                     }
+                    else
+                        host.id = 0;
                     host_initial = host;
                 }
 
@@ -525,6 +554,8 @@ int handle_wu(
                 case VALIDATE_STATE_VALID:
                     update_result = true;
                     update_host = true;
+                    if (result.hostid == 0)
+                        break;
                     retval = is_valid(host, result, wu, host_app_versions[i]);
                     if (retval) {
                         log_messages.printf(MSG_DEBUG,
@@ -552,6 +583,8 @@ int handle_wu(
                         "[RESULT#%lu %s] Invalid [HOST#%lu]\n",
                         result.id, result.name, result.hostid
                     );
+                    if (result.hostid == 0)
+                        break;
                     is_invalid(host_app_versions[i]);
                     break;
                 case VALIDATE_STATE_INIT:
@@ -581,7 +614,7 @@ int handle_wu(
                             );
                         }
                     }
-                    if (update_host) {
+                    if (update_host && host.id) {
                         retval = host.update_diff_validator(host_initial);
                         if (retval) {
                             log_messages.printf(MSG_CRITICAL,

@@ -145,11 +145,16 @@ int check_set(
 
             // set validate state for each result
             //
+            canonicalid = 0;
             for (j=0; j!=n; j++) {
                 if (had_error[j]) continue;
                 results[j].validate_state = matches[j] ? VALIDATE_STATE_VALID : VALIDATE_STATE_INVALID;
+                // Update canonicalid is result came from true (non-zero) host
+                if (canonicalid == 0 && matches[j] && results[j].hostid != 0)
+                    canonicalid = results[j].id;
             }
-            canonicalid = results[i].id;
+            if (canonicalid == 0)  // fail-safe (only one fake result exit, must never happen
+                canonicalid = results[i].id;
             break;
         }
     }
