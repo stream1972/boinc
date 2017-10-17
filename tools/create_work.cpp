@@ -171,6 +171,10 @@ void JOB_DESC::parse_cmdline(int argc, char** argv) {
             safe_strcpy(wu_template_file, argv[++i]);
         } else if (arg(argv, i, (char*)"result_template")) {
             safe_strcpy(result_template_file, argv[++i]);
+        } else if (arg(argv, i, "priority")) {
+            wu.priority = atoi(argv[++i]);
+        } else if (arg(argv, i, "additional_xml")) {
+            safe_strcpy(additional_xml, argv[++i]);
         } else if (arg(argv, i, (char*)"remote_file")) {
             INFILE_DESC id;
             id.is_remote = true;
