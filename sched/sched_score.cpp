@@ -130,7 +130,15 @@ bool JOB::get_score(int array_index) {
         }
     }
 
+#if 1
+    // my way: prefer old workunits
+    double d = (double)(time(NULL) - wu_result.workunit.create_time) / (365*24*60*60);
+    if (d > 0)
+        score += d;
+#else
+    // Boinc default way. Unacceptable for me, becase priority contains 'n' of candidate
     score += wu_result.res_priority;
+#endif
 
     if (config.keyword_sched) {
         double x = keyword_score(array_index);
