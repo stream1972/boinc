@@ -1092,7 +1092,8 @@ void DB_RESULT::db_print_values(char* buf){
         "'%s', '%s', '%s', "
         "%d, %d, %d, "
         "%.15e, %.15e, %.15e, %d, "
-        "%d, %lu, %d, %lu, %d, NOW(), 0, 0, 0, 0, %d, 0, 0, 0)",
+        "%d, %lu, %d, %lu, %d, NOW(), 0, 0, 0, 0, %d, 0, 0, 0, "
+        "0)",   // added: gui_state
         create_time, workunitid,
         server_state, outcome, client_state,
         hostid, userid,

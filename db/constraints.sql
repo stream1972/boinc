@@ -66,8 +66,19 @@ alter table result
     add index res_hostid_id (hostid, id desc),
         -- html_user/results.php
 
-    add index res_wu_user (workunitid, userid);
+    add index res_wu_user (workunitid, userid),
         -- scheduler (avoid sending mult results of same WU to one user)
+
+    -- my extra fields
+
+    add index res_senttime (sent_time),
+        -- HTML: ordering of workunits (???)
+
+    add index res_user_gui     (userid, gui_state),
+    add index res_user_app_gui (userid, appid, gui_state),
+    add index res_host_gui     (hostid, gui_state),
+    add index res_host_app_gui (hostid, appid, gui_state);
+        -- HTML: quick calc for number of results for user/app/host combos
 
 alter table msg_from_host
     add index message_handled (handled);
@@ -146,3 +157,40 @@ alter table credit_user
 alter table credit_team
     add index ct_total(appid, total),
     add index ct_avg(appid, expavg);
+
+
+
+
+    -- gui_state field must be calculated by database itself
+delimiter //
+
+create trigger upd_gui_state before update on result
+for each row
+begin
+    if NEW.server_state <> OLD.server_state OR NEW.outcome <> OLD.outcome OR NEW.validate_state <> OLD.validate_state then
+        set NEW.gui_state =
+            case NEW.server_state
+                when 4 then 1
+                when 5 then
+                    case
+                        when NEW.outcome=1 then
+                            case NEW.validate_state
+                                when 0 then 2
+                                when 4 then 3
+                                when 1 then 4
+                                when 2 then 5
+                                when 3 then 5
+                                when 5 then 5
+                                else NEW.gui_state
+                            end
+                        when NEW.outcome=6            then 5
+                        when NEW.outcome in (3, 4, 7) then 6
+                        else NEW.gui_state
+                    end
+                else NEW.gui_state
+            end
+        ;
+    end if;
+end; //
+
+delimiter ;
