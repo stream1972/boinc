@@ -72,6 +72,8 @@ static void stop_signal_handler(int) {
 
 void install_stop_signal_handler() {
     signal(STOP_SIGNAL, stop_signal_handler);
+    signal(SIGTERM, stop_signal_handler);
+    signal(SIGINT,  stop_signal_handler);
     // handler is now default again so hitting ^C again will kill the program.
 }
 
