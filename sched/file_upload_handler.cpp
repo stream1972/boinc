@@ -296,7 +296,7 @@ int handle_file_upload(FILE* in, R_RSA_PUBLIC_KEY& key) {
     strcpy(xml_signature, "");
     bool found_data = false;
     while (fgets(buf, 256, in)) {
-#if 1
+#if 0
         log_messages.printf(MSG_NORMAL, "got:%s\n", buf);
 #endif
         if (match_tag(buf, "<file_info>")) continue;
