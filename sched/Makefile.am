@@ -109,6 +109,8 @@ schedshare_PROGRAMS = \
     db_purge \
     feeder \
     file_deleter \
+    genefer_assimilator \
+    genefer_validator \
     message_handler \
     sample_assimilator \
     sample_bitwise_validator \
@@ -235,6 +237,15 @@ sample_trivial_validator_LDADD = $(SERVERLIBS)
 ASSIMILATOR_SOURCES = \
 	assimilator.cpp \
 	validate_util.cpp
+
+genefer_assimilator_SOURCES = $(ASSIMILATOR_SOURCES) \
+	genefer_assimilator.cpp \
+	genefer_validator.cpp
+genefer_assimilator_LDADD = $(SERVERLIBS)
+
+genefer_validator_SOURCES = $(VALIDATOR_SOURCES) \
+	genefer_validator.cpp
+genefer_validator_LDADD = $(SERVERLIBS)
 
 sample_dummy_assimilator_SOURCES = $(ASSIMILATOR_SOURCES) \
 	sample_dummy_assimilator.cpp
