@@ -74,6 +74,8 @@ void usage() {
         "    [--one_pass]                  Make one DB scan, then exit\n"
         "    [--dont_delete]               Don't actually delete anything from the DB (for testing only)\n"
         "    [--mod M R ]                  Handle only WUs with ID mod M == R\n"
+        "    [--app name]                  Handle only specific app\n"
+        "    [--dir dir]                   Base directory name (default: 'archives')\n"
         "    [--h | --help]                Show this help text\n"
         "    [--v | --version]             Show version information\n"
     );
@@ -246,6 +248,8 @@ int id_modulus=0, id_remainder=0;
 char app_name[256];
 DB_APP app;
 
+static char archives_path[MAXPATHLEN];
+
 bool time_to_quit() {
     if (max_number_workunits_to_purge) {
         if (purged_workunits >= max_number_workunits_to_purge) return true;
@@ -272,7 +276,7 @@ void open_archive(const char* filename_prefix, void*& f){
         time_t time_time = time_int;
         char dirname[32];
         strftime(dirname, sizeof(dirname), "%Y_%m_%d", gmtime(&time_time));
-        safe_strcpy(path, config.project_path("archives/%s",dirname));
+        safe_strcpy(path, config.project_path("%s/%s",archives_path,dirname));
         if (mkdir(path,0775)) {
             if(errno!=EEXIST) {
                 char errstr[256];
@@ -283,12 +287,12 @@ void open_archive(const char* filename_prefix, void*& f){
         }
         safe_strcpy(path,
             config.project_path(
-                "archives/%s/%s_%d.xml", dirname, filename_prefix, time_int
+                "%s/%s/%s_%d.xml", archives_path, dirname, filename_prefix, time_int
             )
         );
     } else {
         safe_strcpy(path,
-            config.project_path("archives/%s_%d.xml", filename_prefix, time_int)
+            config.project_path("%s/%s_%d.xml", archives_path, filename_prefix, time_int)
         );
     }
     // append appropriate suffix for file type
@@ -372,12 +376,12 @@ void close_archive(const char *filename, void*& fp){
         strftime(dirname, sizeof(dirname), "%Y_%m_%d", gmtime(&time_time));
         safe_strcpy(path,
             config.project_path(
-                  "archives/%s/%s_%d.xml", dirname, filename, time_int
+                  "%s/%s/%s_%d.xml", archives_path, dirname, filename, time_int
             )
         );
     } else {
         safe_strcpy(path,
-            config.project_path("archives/%s_%d.xml", filename, time_int)
+            config.project_path("%s/%s_%d.xml", archives_path, filename, time_int)
         );
     }
     // append appropriate file type
@@ -749,6 +753,7 @@ int main(int argc, char** argv) {
     check_stop_daemons();
     char buf[256];
 
+    strcpy(archives_path, "archives");
     for (i=1; i<argc; i++) {
         if (is_arg(argv[i], "one_pass")) {
             one_pass = true;
@@ -827,6 +832,8 @@ int main(int argc, char** argv) {
             id_remainder = atoi(argv[++i]);
         } else if (is_arg(argv[i], "app")) {
             safe_strcpy(app_name, argv[++i]);
+        } else if (is_arg(argv[i], "dir")) {
+            safe_strcpy(archives_path, argv[++i]);
         } else {
             log_messages.printf(MSG_CRITICAL,
                 "unknown command line argument: %s\n\n", argv[i]
@@ -862,7 +869,7 @@ int main(int argc, char** argv) {
         exit(2);
     }
     install_stop_signal_handler();
-    boinc_mkdir(config.project_path("archives"));
+    boinc_mkdir(config.project_path("%s", archives_path));
 
     // on exit, either via the check_stop_daemons signal handler, or
     // through a regular call to exit, these functions will be called
