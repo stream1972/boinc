@@ -267,8 +267,8 @@ int compare_results(
     if (!match)
     {
         log_messages.printf(MSG_CRITICAL, "Validation error:\n");
-        log_messages.printf(MSG_CRITICAL, "  [RESULT#%lu %s] %s\n", r1.id, r1.name, (char*)data1);
-        log_messages.printf(MSG_CRITICAL, "  [RESULT#%lu %s] %s\n", r2.id, r2.name, (char*)data2);
+        log_messages.printf(MSG_CRITICAL, "  [RESULT#%lu %s U%ld H%ld] %s\n", r1.id, r1.name, r1.userid, r1.hostid, (char*)data1);
+        log_messages.printf(MSG_CRITICAL, "  [RESULT#%lu %s U%ld H%ld] %s\n", r2.id, r2.name, r2.userid, r2.hostid, (char*)data2);
     }
 
     return 0;
