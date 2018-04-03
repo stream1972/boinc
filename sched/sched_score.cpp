@@ -93,6 +93,22 @@ bool JOB::get_score(int array_index) {
         }
     }
 
+    // Skip versions (CPU/GPU) disabled on site in project-specific settings.
+    int pt = bavp->host_usage.proc_type;
+    if (proc_type_not_selected(app->id, pt)) {
+        if (g_wreq->project_prefs.allow_non_preferred_apps) {
+            score -= 1;
+        } else {
+            if (config.debug_send_job) {
+                log_messages.printf(MSG_NORMAL,
+                    "[send_job] proctype %d (%s) not selected for job %lu\n",
+                    pt, proc_type_name(pt), wu_result.workunit.id
+                );
+            }
+            return false;
+        }
+    }
+
     if (wu_result.infeasible_count) {
         score += 1;
     }

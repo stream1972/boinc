@@ -194,6 +194,18 @@ void PROJECT_PREFS::parse() {
 
         pos = str.find("<app_id>", pos) + 1;
     }
+    apps_disable_cpu.clear();
+    pos = 0;
+    while (parse_int(str.substr(pos,str.length()-pos).c_str(), "<app_id_no_cpu>", temp_int)) {
+        apps_disable_cpu.push_back(temp_int);
+        pos = str.find("<app_id_no_cpu>", pos) + 1;
+    }
+    apps_disable_gpu.clear();
+    pos = 0;
+    while (parse_int(str.substr(pos,str.length()-pos).c_str(), "<app_id_no_gpu>", temp_int)) {
+        apps_disable_gpu.push_back(temp_int);
+        pos = str.find("<app_id_no_gpu>", pos) + 1;
+    }
     if (parse_bool(buf,"allow_non_preferred_apps", flag)) {
         allow_non_preferred_apps = flag;
     }

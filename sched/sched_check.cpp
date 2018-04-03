@@ -60,6 +60,32 @@ bool app_not_selected(int appid) {
     return true;
 }
 
+// Return true if the user has excluded a device (CPU or GPU) from enabled app
+bool proc_type_not_selected(int appid, int proctype)
+{
+    bool no_cpu = in_vector(appid, g_wreq->project_prefs.apps_disable_cpu);
+    bool no_gpu = in_vector(appid, g_wreq->project_prefs.apps_disable_gpu);
+
+    if (config.debug_send_job) {
+        log_messages.printf(MSG_NORMAL,
+            "[send_job] appid=%d, proctype=%d, no_cpu=%d, no_gpu=%d\n",
+            appid, proctype, no_cpu, no_gpu
+        );
+    }
+
+    if (no_cpu && no_gpu)   // at least one must be set, ignored
+        return false;
+    switch (proctype)
+    {
+    case PROC_TYPE_NVIDIA_GPU:
+    case PROC_TYPE_AMD_GPU:
+    case PROC_TYPE_INTEL_GPU:
+        return no_gpu;
+    default:
+        return no_cpu;
+    }
+}
+
 static inline int check_memory(WORKUNIT& wu) {
     double diff = wu.rsc_memory_bound - g_wreq->usable_ram;
     if (diff > 0) {

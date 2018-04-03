@@ -364,6 +364,8 @@ struct DISK_LIMITS {
 //
 struct PROJECT_PREFS {
     std::vector<APP_INFO> selected_apps;
+    std::vector<int> apps_disable_cpu;
+    std::vector<int> apps_disable_gpu;
     bool dont_use_proc_type[NPROC_TYPES];
     bool allow_non_preferred_apps;
     bool allow_beta_work;
