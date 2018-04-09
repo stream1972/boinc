@@ -48,6 +48,20 @@ int write_error(char* p) {
 
 int get_residue_strdup(RESULT &result, const char *infile, char* &data, unsigned & EXP, unsigned & N);
 
+int assimilate_handler_init(int argc, char** argv) {
+    // handle project specific arguments here
+    (void) argc; (void) argv;
+    return 0;
+}
+
+void assimilate_handler_usage() {
+    // describe the project specific arguments here
+    //fprintf(stderr,
+    //    "    Custom options:\n"
+    //    "    [--project_option X]  a project specific option\n"
+    //);
+}
+
 int assimilate_handler(WORKUNIT& wu, vector<RESULT>& results, RESULT& canonical_result)
 {
     int retval;
