@@ -67,12 +67,18 @@
 // are the 2 hosts obviously different computers?
 //
 static bool obviously_different(HOST& h1, HOST& h2) {
+#if 1
+    // New Boinc way is not good for my own setup
+    (void) h1; (void) h2;
+    return false;
+#else
     if (h1.p_ncpus != h2.p_ncpus) return true;
     if (strcmp(h1.p_vendor, h2.p_vendor)) return true;
     if (strcmp(h1.p_model, h2.p_model)) return true;
     if (strcmp(h1.os_name, h2.os_name)) return true;
     if (strcmp(h1.os_version, h2.os_version)) return true;
     return false;
+#endif
 }
 
 // find the user's most recently-created host with given various characteristics
