@@ -9,12 +9,16 @@
 using std::string;
 using std::vector;
 
-static void parse_cmdline(void)
+int validate_handler_init(int argc, char **argv)
 {
-    for (int i=1; i<g_argc; i++)
-    {
-        // check g_argv[i] here
-    }
+    (void) argc; (void) argv;
+
+    return 0;
+}
+
+void validate_handler_usage(void)
+{
+    // describe the project specific arguments here
 }
 
 static int get_residue_from_fp(RESULT &result, const char *infile, char* &data, unsigned &RET_EXP, unsigned &RET_N, FILE *in)
@@ -189,13 +193,6 @@ int init_result(RESULT& result, void*& data)
 {
     int retval;
     vector<OUTPUT_FILE_INFO> files;
-
-    static bool once;
-    if (!once)
-    {
-        parse_cmdline();
-        once = true;
-    }
 
     retval = get_output_file_infos(result, files);
     if (retval)
