@@ -627,7 +627,7 @@ BEST_APP_VERSION* get_app_version(
             if (config.max_jobs_in_progress.exceeded(
                 app, bavp->host_usage.proc_type
             )) {
-                if (config.debug_version_select) {
+                if (1 /* config.debug_version_select */) {
                     app_version_desc(*bavp, buf);
                     log_messages.printf(MSG_NORMAL,
                         "[version] %s: max jobs in progress exceeded\n", buf
@@ -795,7 +795,7 @@ BEST_APP_VERSION* get_app_version(
             }
 
             if (daily_quota_exceeded(av.id, host_usage)) {
-                if (config.debug_version_select) {
+                if (1 /* config.debug_version_select */) {
                     log_messages.printf(MSG_NORMAL,
                         "[version] [AV#%lu] daily quota exceeded\n", av.id
                     );
@@ -806,7 +806,7 @@ BEST_APP_VERSION* get_app_version(
             // skip versions for which we're at the jobs-in-progress limit
             //
             if (config.max_jobs_in_progress.exceeded(app, host_usage.proc_type)) {
-                if (config.debug_version_select) {
+                if (1 /* config.debug_version_select */) {
                     log_messages.printf(MSG_NORMAL,
                         "[version] [AV#%lu] jobs in progress limit exceeded\n",
                         av.id
