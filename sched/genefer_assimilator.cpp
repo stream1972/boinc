@@ -112,8 +112,10 @@ int assimilate_handler(WORKUNIT& wu, vector<RESULT>& results, RESULT& canonical_
                 "[RESULT#%lu %s] cannot open output file '%s'\n",
                 canonical_result.id, canonical_result.name, output_path
             );
+            free(res);
             return ERR_FOPEN;
         }
+
         bool err = false;
         if (fprintf(f, "%u,%u,%s", EXP, N, res) < 0)
             err = true;
@@ -131,6 +133,8 @@ int assimilate_handler(WORKUNIT& wu, vector<RESULT>& results, RESULT& canonical_
 
         if (fclose(f) < 0)
             err = true;
+
+        free(res);
         if (err)
         {
             log_messages.printf(MSG_CRITICAL,

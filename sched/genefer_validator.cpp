@@ -233,9 +233,12 @@ int init_result(RESULT& result, void*& data)
 //      printf("Got residue: '%s'\n", res);
         char *full_res = NULL;
         if (res)
+        {
             full_res = (char*) malloc(strlen(res) + 64);
-        if (full_res)
-            sprintf(full_res, "%u %u %s", dummy_exp, dummy_n, res);
+            if (full_res)
+                sprintf(full_res, "%u %u %s", dummy_exp, dummy_n, res);
+            free(res);
+        }
 //      printf("Got data: '%s'\n", full_res);
         data = full_res;
         return retval;
