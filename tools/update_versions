@@ -180,10 +180,7 @@ function stage_file($a, $v, $p, $fd) {
     }
     if ($fd->gzip) {
         if (!file_exists("$dl_path.gz")) {
-            $tmp = "$dl_path.tmp";
-            system("cp $dl_path $tmp");
-            system("gzip $dl_path");
-            system("mv $tmp $dl_path");
+            system("gzip -k $dl_path");
         }
         $stat = stat("$dl_path.gz");
         $fd->gzipped_nbytes = $stat['size'];
