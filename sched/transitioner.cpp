@@ -62,6 +62,9 @@
 
 #define DEFAULT_SLEEP_INTERVAL  5
 
+// Define this if you want to obsufcate task suffixes (hide primary/doublecheck info)
+#define RANDOM_SUFFIX
+
 int startup_time;
 R_RSA_PRIVATE_KEY key;
 int mod_n, mod_i;
@@ -175,7 +178,12 @@ int handle_wu(
     nno_reply = 0;
     ndidnt_need = 0;
     have_new_result_to_validate = false;
+#ifdef RANDOM_SUFFIX
+    int rs;
+    vector<int> used_suffixes;
+#else
     int rs, max_result_suffix = -1;
+#endif
 
     // Scan the WU's results, and find the canonical result if there is one
     //
@@ -221,7 +229,11 @@ int handle_wu(
         ntotal++;
 
         rs = result_suffix(res_item.res_name);
+#ifdef RANDOM_SUFFIX
+        used_suffixes.push_back(rs);
+#else
         if (rs > max_result_suffix) max_result_suffix = rs;
+#endif
 
         switch (res_item.res_server_state) {
         case RESULT_SERVER_STATE_INACTIVE:
@@ -458,7 +470,15 @@ int handle_wu(
                 wu_item.target_nresults, nunsent, ninprogress, nsuccess
             );
             for (j=0; j<n_new_results_needed; j++) {
+#ifdef RANDOM_SUFFIX
+                do {
+                    rs = random();
+                } while (in_vector(rs, used_suffixes));
+                used_suffixes.push_back(rs);
+                sprintf(suffix, "%d", rs);
+#else
                 sprintf(suffix, "%d", max_result_suffix+j+1);
+#endif
                 const char *rtfpath = config.project_path("%s", wu_item.result_template_file);
                 int priority_increase = 0;
                 if (nover && config.reliable_priority_on_over) {
