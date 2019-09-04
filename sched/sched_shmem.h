@@ -76,6 +76,9 @@ struct WU_RESULT {
     int res_server_state;
     double res_report_deadline;
     double fpops_size;      // measured in stdevs
+    // Users who get this workunit (cached status from DB)
+#define WR_CACHED_USERS 4
+    DB_ID_TYPE wu_sent_to[WR_CACHED_USERS];
 };
 
 // this struct is followed in memory by an array of WU_RESULTS

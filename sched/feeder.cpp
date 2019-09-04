@@ -504,7 +504,6 @@ static bool scan_work_array(vector<DB_WORK_ITEM> &work_items) {
                 wu_result.res_server_state = wi.res_server_state;
                 wu_result.res_report_deadline = wi.res_report_deadline;
                 wu_result.workunit = wi.wu;
-                wu_result.state = WR_STATE_PRESENT;
                 // If the workunit has already been allocated to a certain
                 // OS then it should be assigned quickly,
                 // so we set its infeasible_count to 1
@@ -521,6 +520,9 @@ static bool scan_work_array(vector<DB_WORK_ITEM> &work_items) {
                     wu_result.need_reliable = true;
                 }
                 wu_result.time_added_to_shared_memory = time(0);
+                memset(wu_result.wu_sent_to, 0, sizeof(wu_result.wu_sent_to));
+                // Set this last, otherwise scheduler may see incomplete data
+                wu_result.state = WR_STATE_PRESENT;
                 nadditions++;
             }
             break;

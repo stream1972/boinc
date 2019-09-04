@@ -417,10 +417,26 @@ int slow_check(
     DB_RESULT result;
     char buf[256];
     WORKUNIT& wu = wu_result.workunit;
+    int free_sent_slot = -1;
 
     // Don't send if we've already sent a result of this WU to this user.
     //
     if (config.one_result_per_user_per_wu) {
+        int i;
+        for (i = 0; i < WR_CACHED_USERS; i++) {
+            if (wu_result.wu_sent_to[i] == 0)
+                free_sent_slot = i;
+            else if (wu_result.wu_sent_to[i] == g_reply->user.id) {
+                if (config.debug_send_job) {
+                    log_messages.printf(MSG_NORMAL,
+                        "[send_job] [USER#%lu] already has result(s) for [WU#%lu] (cached)\n",
+                        g_reply->user.id, wu.id
+                    );
+                }
+                return CHECK_NO_HOST;
+            }
+        }
+
         sprintf(buf,
             "where workunitid=%lu and userid=%lu", wu.id, g_reply->user.id
         );
@@ -438,6 +454,8 @@ int slow_check(
                         g_reply->user.id, n, wu.id
                     );
                 }
+                // Cache this information in memory to avoid future db accesses
+                if (free_sent_slot >= 0) wu_result.wu_sent_to[free_sent_slot] = g_reply->user.id;
                 return CHECK_NO_HOST;
             }
         }

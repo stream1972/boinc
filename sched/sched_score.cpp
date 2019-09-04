@@ -351,7 +351,6 @@ void send_work_score_type(int rt) {
             // mark slot as empty AFTER we've copied out of it
             // (since otherwise feeder might overwrite it)
             //
-            wu_result.state = WR_STATE_EMPTY;
             if (config.keyword_sched) {
                 keyword_sched_remove_job(job.index);
             }
@@ -372,6 +371,9 @@ void send_work_score_type(int rt) {
                 // The feeder will eventually pick it up again,
                 // and hopefully the problem won't happen twice.
             }
+
+            // Free record only after DB update to decrease chance of race condition in feeder
+            wu_result.state = WR_STATE_EMPTY;
             break;
         }
     }
