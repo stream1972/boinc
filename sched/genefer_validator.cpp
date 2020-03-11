@@ -56,7 +56,7 @@ static int get_residue_from_fp(RESULT &result, const char *infile, char* &data, 
         static const char 
             pattern_composite[] = "^([0-9]+)\\^([0-9]+)\\+1 is composite\\. \\(RES=([0-9a-fA-F]{16})\\) \\([0-9]+ digits\\) \\(err = [0-9]",
             pattern_compo_llr[] = "^([0-9]+)\\^([0-9]+)\\+1 is not prime\\.  RES64: ([0-9a-fA-F]{16})\\.  OLD64: ([0-9a-fA-F]{16})  Time : [0-9]+",
-            pattern_prime_llr[] =" ^([0-9]+)\\^([0-9]+)\\+1 is prime! \\([0-9]+ decimal digits\\)  Time : [0-9]+",
+            pattern_prime_llr[] = "^([0-9]+)\\^([0-9]+)\\+1 is prime! \\([0-9]+ decimal digits\\)  Time : [0-9]+",
             pattern_prime[]     = "^([0-9]+)\\^([0-9]+)\\+1 is a probable prime\\. \\([0-9]+ digits\\) \\(err = [0-9]";
 
         once = true;
