@@ -72,7 +72,9 @@ int main(int argc, char *argv[]) {
     }
     ssp = (SCHED_SHMEM*)p;
     retval = ssp->verify();
-    ssp->show(stdout);
+    if (!retval) {
+        ssp->show(stdout);
+    }
 }
 
 const char *BOINC_RCSID_a370415aab = "$Id$";
