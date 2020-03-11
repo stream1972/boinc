@@ -149,7 +149,7 @@ int assimilate_handler(WORKUNIT& wu, vector<RESULT>& results, RESULT& canonical_
         }
         time_t now = time(NULL);
         strftime(tsbuf, sizeof(tsbuf), (wu.transitioner_flags & TRANSITION_NO_NEW_RESULTS ? "%Y-%m-cancelled" : "%F"), gmtime(&now));
-        const char *output_path = config.project_path(OUTPUT_DIR "/gfn%u_%s.csv", EXP_SCALE, tsbuf);
+        const char *output_path = config.project_path(OUTPUT_DIR "/gfn%u_%s.csv%s", EXP_SCALE, tsbuf, (use_llr ? "_new" : ""));
         FILE *f = fopen(output_path, "at");
         if (f == NULL)
         {
@@ -169,11 +169,16 @@ int assimilate_handler(WORKUNIT& wu, vector<RESULT>& results, RESULT& canonical_
             RESULT &r = results[i];
             if (r.validate_state == VALIDATE_STATE_VALID)
             {
-                if (fprintf(f, ",%ld,%ld,%ld,%d", r.userid, r.hostid, r.app_version_id, r.received_time) < 0)
-                    err = true;
                 if (use_llr)
                 {
+                    if (fprintf(f, ",%ld,%ld,%ld,%ld,%d,%.15g", r.userid, r.hostid, r.teamid, r.app_version_id, r.received_time, r.granted_credit) < 0)
+                        err = true;
                     if (fprintf(f, ",%u", get_llr_version(r.stderr_out)) < 0)
+                        err = true;
+                }
+                else
+                {
+                    if (fprintf(f, ",%ld,%ld,%ld,%d", r.userid, r.hostid, r.app_version_id, r.received_time) < 0)
                         err = true;
                 }
             }
