@@ -96,6 +96,14 @@ int check_set(
                 results[i].id, results[i].name
             );
             suspicious_results++;
+        } else if (retval == VAL_RESULT_NEED_MORE_WORK) {
+            // Similar to ERR_OPENDIR, but no critical error messages and retry
+            log_messages.printf(MSG_NORMAL,
+                "[RESULT#%lu %s] not ready, extra processing required\n",
+                results[i].id, results[i].name
+            );
+            results[i].validate_state = VALIDATE_STATE_NO_CHECK;   // magic flag to exclude result from following processing
+            had_error[i] = true;
         } else if (retval) {
             log_messages.printf(MSG_CRITICAL,
                 "check_set: init_result([RESULT#%lu %s]) failed: %s\n",
@@ -184,6 +192,13 @@ void check_pair(RESULT& r1, RESULT& r2, bool& retry) {
         );
         retry = true;
         return;
+    } else if (retval == VAL_RESULT_NEED_MORE_WORK) {
+        log_messages.printf(MSG_CRITICAL,
+            "check_pair: init_result([RESULT#%lu %s]) not ready, extra processing required 1\n",
+            r1.id, r1.name
+        );
+        r1.validate_state = VALIDATE_STATE_NO_CHECK;   // magic flag to exclude result from following processing
+        return;
     } else if (retval) {
         log_messages.printf(MSG_CRITICAL,
             "check_pair: init_result([RESULT#%lu %s]) perm failure 1\n",
@@ -194,6 +209,7 @@ void check_pair(RESULT& r1, RESULT& r2, bool& retry) {
         return;
     }
 
+    // Canonical result cannot require extra processing, not checking it here
     retval = init_result(r2, data2);
     if (retval == ERR_OPENDIR) {
         log_messages.printf(MSG_CRITICAL,

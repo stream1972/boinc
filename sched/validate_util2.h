@@ -23,6 +23,11 @@
 //
 #define VAL_RESULT_SUSPICIOUS 1
 
+
+// return value of init_result if more processing required by
+// external tools, do not continue validation now.
+#define VAL_RESULT_NEED_MORE_WORK  10
+
 #include <vector>
 
 #include "boinc_db_types.h"

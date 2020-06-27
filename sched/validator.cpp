@@ -150,7 +150,7 @@ int is_valid(
         credited_job.userid = host.userid;
         credited_job.workunitid = long(wu.opaque);
         if (dry_run) {
-            log_messages.printf(MSG_NORMAL, "DB not updated (dry run)\n");
+            log_messages.printf(MSG_NORMAL, "update_credited_job: DB not updated (dry run)\n");
         } else {
             retval = credited_job.insert();
             if (retval) {
@@ -246,6 +246,10 @@ int handle_wu(
                 //
                 transition_time = DELAYED;
                 goto leave;
+            }
+            // this fake value is set when result need extra processing
+            if (result.validate_state == VALIDATE_STATE_NO_CHECK) {
+                continue;
             }
             update_result = false;
 
@@ -345,7 +349,7 @@ int handle_wu(
             }
             if (hav.host_id && update_hav) {
                 if (dry_run) {
-                    log_messages.printf(MSG_NORMAL, "DB not updated (dry run)\n");
+                    log_messages.printf(MSG_NORMAL, "update_hav: DB not updated (dry run)\n");
                 } else {
                     log_messages.printf(MSG_NORMAL,
                         "[HOST#%lu AV#%lu] [outlier=%d] Updating HAV in DB.  pfc.n=%f->%f\n",
@@ -369,7 +373,7 @@ int handle_wu(
                     result.id, result.name, result.granted_credit
                 );
                 if (dry_run) {
-                    log_messages.printf(MSG_NORMAL, "DB not updated (dry run)\n");
+                    log_messages.printf(MSG_NORMAL, "update_result: DB not updated (dry run)\n");
                 } else {
                     retval = validator.update_result(result);
                     if (retval) {
@@ -440,7 +444,10 @@ int handle_wu(
                 );
                 return retval;
             }
-            if (retry) transition_time = DELAYED;
+            if (retry) {
+                transition_time = DELAYED;
+                goto leave;
+            }
 
             // if we found a canonical instance, decide on credit
             //
@@ -462,6 +469,9 @@ int handle_wu(
                 }
 
                 if (credit_from_wu) {
+                    credit = wu.canonical_credit;
+                    if (credit == 0) {
+// temporary workaround for old-style WUs
                     retval = get_credit_from_wu(wu, viable_results, credit);
                     if (retval) {
                         log_messages.printf(MSG_CRITICAL,
@@ -469,6 +479,7 @@ int handle_wu(
                             wu.id, wu.name
                         );
                         credit = 0;
+                    }
                     }
                 } else if (credit_from_runtime) {
                     credit = 0;
@@ -525,6 +536,8 @@ int handle_wu(
                 ) {
                     transition_time = IMMEDIATE;
                     update_result = true;
+                } else if (result.validate_state == VALIDATE_STATE_NO_CHECK) {
+                    // Nothing, just exclude from processing (also it's not viable)
                 } else {
                     n_viable_results++;
                 }
@@ -595,10 +608,14 @@ int handle_wu(
                     result.validate_state = VALIDATE_STATE_INCONCLUSIVE;
                     update_result = true;
                     break;
+                case VALIDATE_STATE_NO_CHECK:  // fake flag to exclude from processing
+                    // only restore state (just in case). It was normal result.
+                    result.validate_state = VALIDATE_STATE_INIT;
+                    break;
                 }
 
                 if (dry_run) {
-                    log_messages.printf(MSG_NORMAL, "DB not updated (dry run)\n");
+                    log_messages.printf(MSG_NORMAL, "update_host(%d), update_result(%d): DB not updated (dry run)\n", update_host, update_result);
                 } else {
                     if (hav.host_id) {
                         log_messages.printf(MSG_NORMAL,
@@ -661,7 +678,7 @@ int handle_wu(
                     result.server_state = RESULT_SERVER_STATE_OVER;
                     result.outcome = RESULT_OUTCOME_DIDNT_NEED;
                     if (dry_run) {
-                        log_messages.printf(MSG_NORMAL, "DB not updated (dry run)\n");
+                        log_messages.printf(MSG_NORMAL, "update_result(SERVER_STATE_UNSENT): DB not updated (dry run)\n");
                     } else {
                         retval = validator.update_result(result);
                         if (retval) {
@@ -716,7 +733,7 @@ leave:
     wu.need_validate = 0;
     
     if (dry_run) {
-        log_messages.printf(MSG_NORMAL, "DB not updated (dry run)\n");
+        log_messages.printf(MSG_NORMAL, "update_workunit: DB not updated (dry run)\n");
     } else {
         retval = validator.update_workunit(wu);
         if (retval) {
