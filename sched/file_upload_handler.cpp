@@ -59,6 +59,8 @@ using std::string;
 #define ERR_TRANSIENT   true
 #define ERR_PERMANENT   false
 
+#define MIN_FREE_SPACE  60e6
+
 char this_filename[256];
 double start_time();
 
@@ -86,7 +88,7 @@ int return_error(bool transient, const char* message, ...) {
         buf
     );
 
-    log_messages.printf(MSG_NORMAL,
+    log_messages.printf(MSG_CRITICAL,
         "Returning error to client %s: %s (%s)\n",
         get_remote_addr(), buf,
         transient?"transient":"permanent"
@@ -452,7 +454,7 @@ bool volume_full(char* path) {
     double total, avail;
     int retval = get_filesystem_info(total, avail, path);
     if (retval) return false;
-    if (avail<1e6) {
+    if (avail < MIN_FREE_SPACE) {
         return true;
     }
     return false;
