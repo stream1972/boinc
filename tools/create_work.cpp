@@ -63,6 +63,7 @@ void usage() {
         "   [ --broadcast_team ID ]\n"
         "   [ --command_line \"X\" ]\n"
         "   [ --config_dir path ]\n"
+        "   [ --credit X ]\n"
         "   [ -d n ]\n"
         "   [ --delay_bound x ]\n"
         "   [ --hr_class n ]\n"
@@ -173,6 +174,12 @@ void JOB_DESC::parse_cmdline(int argc, char** argv) {
             safe_strcpy(result_template_file, argv[++i]);
         } else if (arg(argv, i, "priority")) {
             wu.priority = atoi(argv[++i]);
+        } else if (arg(argv, i, "credit")) {
+            wu.canonical_credit = atof(argv[++i]);
+        } else if (arg(argv, i, "rsc_fpops_est")) {
+            wu.rsc_fpops_est = atof(argv[++i]);
+        } else if (arg(argv, i, "rsc_fpops_bound")) {
+            wu.rsc_fpops_bound = atof(argv[++i]);
         } else if (arg(argv, i, "additional_xml")) {
             safe_strcpy(additional_xml, argv[++i]);
         } else if (arg(argv, i, (char*)"remote_file")) {
@@ -266,6 +273,8 @@ int main(int argc, char** argv) {
             jd.wu.batch = atoi(argv[++i]);
         } else if (arg(argv, i, "priority")) {
             jd.wu.priority = atoi(argv[++i]);
+        } else if (arg(argv, i, "credit")) {
+            jd.wu.canonical_credit = atof(argv[++i]);
         } else if (arg(argv, i, "rsc_fpops_est")) {
             jd.wu.rsc_fpops_est = atof(argv[++i]);
         } else if (arg(argv, i, "rsc_fpops_bound")) {
