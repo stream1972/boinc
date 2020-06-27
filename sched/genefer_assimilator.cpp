@@ -31,10 +31,14 @@ using std::vector;
 using std::string;
 
 #define OUTPUT_DIR "genefer_results"
+#define OUTPUT_DIR_LLR2 "results/llr2"
 
 int get_residue_strdup(RESULT &result, const char *infile, char* &data, unsigned & EXP, uint64_t & B);
 unsigned get_llr_version(const char *text);
-extern bool use_llr;
+extern char use_llr;
+
+bool dry_run;  // hack - it referenced by validator code. assimulator uses 'update_db' (inverted meaning)
+extern bool update_db;  // we'll set dry_run on initialization
 
 int assimilate_handler_init(int argc, char** argv)
 {
@@ -69,7 +73,8 @@ static int copy_result_files(RESULT &result, FILE *fout)
     }
 
     int nFiles = files.size();
-    for (int i = 0; i < nFiles; i++)
+    // for LLR2 tasks, dump only last file in the list which corresponds to 'lresults.txt'
+    for (int i = (use_llr == 2 && nFiles) ? nFiles-1 : 0; i < nFiles; i++)
     {
         OUTPUT_FILE_INFO& fi = files[i];
         FILE *f = fopen(fi.path.c_str(), "rt");
@@ -105,21 +110,77 @@ static int copy_result_files(RESULT &result, FILE *fout)
     return retval;
 }
 
+
+static int save_lresults(const char *output_path, vector<RESULT>& results, RESULT& canonical_result)
+{
+    int retval;
+    FILE *fout;
+
+    fout = fopen(output_path, "at");
+    if (fout == NULL)
+    {
+        log_messages.printf(MSG_CRITICAL,
+            "[RESULT#%lu %s] cannot open output file '%s'\n",
+            canonical_result.id, canonical_result.name, output_path
+        );
+        return ERR_FOPEN;
+    }
+
+    retval = 0;
+    for (unsigned i = 0; i < results.size() && !retval; i++)
+        retval = copy_result_files(results[i], fout);
+
+    if (fclose(fout) < 0)
+        retval = ERR_FWRITE;
+
+    if (retval)
+    {
+        log_messages.printf(MSG_CRITICAL,
+            "[RESULT#%lu %s] cannot write to output file '%s'\n",
+            canonical_result.id, canonical_result.name, output_path
+        );
+        return retval;
+    }
+
+    return 0;
+}
+
+#define OPAQUE_LLR2_TASK_IS_CERT   0x04
+
+int assimilate_llr2(WORKUNIT& wu, vector<RESULT>& results, RESULT& canonical_result)
+{
+    unsigned opaq = (unsigned) wu.opaque;
+    if (opaq & OPAQUE_LLR2_TASK_IS_CERT)
+        return 0;  // not interested in certs
+
+    char tsbuf[128];
+    time_t now = time(NULL);
+    strftime(tsbuf, sizeof(tsbuf), "%Y-%m" /* "%F" */, gmtime(&now));
+    const char *output_path = config.project_path(OUTPUT_DIR_LLR2 "/residues-llr2_%s.txt", tsbuf);
+    return save_lresults(output_path, results, canonical_result);
+}
+
 int assimilate_handler(WORKUNIT& wu, vector<RESULT>& results, RESULT& canonical_result)
 {
     int retval;
     char tsbuf[128];
 
     static bool once;
+    static const char *ERROR_OUTPUT_FILE;
     if (!once)
     {
         once = true;
-        retval = boinc_mkdir(config.project_path(OUTPUT_DIR));
+        retval = boinc_mkdir(config.project_path(use_llr == 2 ? OUTPUT_DIR_LLR2 : OUTPUT_DIR));
         if (retval) return retval;
+        ERROR_OUTPUT_FILE = (use_llr == 2) ? OUTPUT_DIR "/errors" : OUTPUT_DIR_LLR2 "/errors";
+        dry_run = !update_db;
     }
 
     if (wu.canonical_resultid)
     {
+        if (use_llr == 2)
+            return assimilate_llr2(wu, results, canonical_result);
+
         vector<OUTPUT_FILE_INFO> output_files;
         get_output_file_infos(canonical_result, output_files);
         int nFiles = output_files.size();
@@ -202,39 +263,15 @@ int assimilate_handler(WORKUNIT& wu, vector<RESULT>& results, RESULT& canonical_
         // Keep extra archive of full LLR results
         if (use_llr)
         {
-            FILE *fout;
-
             output_path = config.project_path(OUTPUT_DIR "/residues-gfn%u_%s.txt", EXP_SCALE, tsbuf);
-            fout = fopen(output_path, "at");
-            if (fout == NULL)
-            {
-                log_messages.printf(MSG_CRITICAL,
-                    "[RESULT#%lu %s] cannot open output file '%s'\n",
-                    canonical_result.id, canonical_result.name, output_path
-                );
-                return ERR_FOPEN;
-            }
-
-            retval = 0;
-            for (unsigned i = 0; i < results.size() && !retval; i++)
-                retval = copy_result_files(results[i], fout);
-
-            if (fclose(fout) < 0)
-                retval = ERR_FWRITE;
-
+            retval = save_lresults(output_path, results, canonical_result);
             if (retval)
-            {
-                log_messages.printf(MSG_CRITICAL,
-                    "[RESULT#%lu %s] cannot write to output file '%s'\n",
-                    canonical_result.id, canonical_result.name, output_path
-                );
                 return retval;
-            }
         }
     }
     else
     {
-        const char *output_path = config.project_path(OUTPUT_DIR "/errors");
+        const char *output_path = config.project_path(ERROR_OUTPUT_FILE);
         FILE *f = fopen(output_path, "at");
         if (f == NULL)
         {

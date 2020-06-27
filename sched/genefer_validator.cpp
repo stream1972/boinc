@@ -10,9 +10,17 @@
 using std::string;
 using std::vector;
 
-bool use_llr;
+char use_llr;
 
 #define GFN16MEGA_B_OFFSET           1814570322693370
+
+static int init_result_gfn_llr(RESULT& result, void*& data);
+static int init_result_llr2(RESULT& result, void*& data);
+static int compare_results_gfn_llr(RESULT & r1, void* data1, RESULT const & r2, void* data2, bool& match);
+static int compare_results_llr2(RESULT & r1, void* data1, RESULT const & r2, void* data2, bool& match);
+
+static int (*init_result_function)(RESULT& result, void*& data);
+static int (*compare_results_function)(RESULT & r1, void* data1, RESULT const & r2, void* data2, bool& match);
 
 int validate_handler_init(int argc, char **argv)
 {
@@ -20,14 +28,36 @@ int validate_handler_init(int argc, char **argv)
 
     for (i = 1; i < argc; i++)
     {
-        if (strcmp(argv[i], "--llr") == 0)
+        if (strcmp(argv[i], "--gfn") == 0)
+        {
+            init_result_function     = init_result_gfn_llr;
+            compare_results_function = compare_results_gfn_llr;
+        }
+        else if (strcmp(argv[i], "--llr") == 0)
+        {
             use_llr = true;
+            init_result_function     = init_result_gfn_llr;
+            compare_results_function = compare_results_gfn_llr;
+        }
+        else if (strcmp(argv[1], "--llr2") == 0)
+        {
+            use_llr = 2;
+            init_result_function     = init_result_llr2;
+            compare_results_function = compare_results_llr2;
+        }
         else
         {
             fprintf(stderr, "Unknown option '%s'\n", argv[i]);
             return -1;
         }
     }
+
+    if (!init_result_function)
+    {
+        fprintf(stderr, "One of parse-type options must be specified\n");
+        return -1;
+    }
+
     return 0;
 }
 
@@ -36,7 +66,10 @@ void validate_handler_usage(void)
     // describe the project specific arguments here
     fprintf(stderr,
         "    Custom options:\n"
-        "    [--llr]                    parse LLR output files (default: Genefer)\n"
+        "    --gfn                      parse Genefer output\n"
+        "    --llr                      parse LLR output\n"
+        "    --llr2                     for use in LLR2 validation workflow\n"
+        "\n"
     );
 }
 
@@ -76,6 +109,7 @@ static int get_residue_from_fp(RESULT &result, const char *infile, char* &data, 
 
     int retval = ERR_OPENDIR;   // transient error to diagnose later
     char inbuf[1024];
+    bool seen_something = false;
 
 read_again:
     if (fgets(inbuf, sizeof(inbuf), in) == NULL)
@@ -87,8 +121,17 @@ read_again:
             "[RESULT#%lu %s] no signatures found in input file '%s'\n",
             result.id, result.name, infile
         );
+        if (!seen_something)
+        {
+            log_messages.printf(MSG_CRITICAL, "because file is empty or corrupted\n");
+            retval = ERR_BAD_FORMAT; // make error critical
+        }
         return retval;
     }
+
+    // To return transient error, file must have some text (even \n) inside.
+    // OK to fail corrupted files (only zero bytes inside).
+    if (*inbuf) seen_something = true;
 
     char *p;
     while ((p = strpbrk(inbuf, "\r\n")) != NULL)  // CR-LF to spaces
@@ -264,6 +307,11 @@ unsigned get_llr_version(const char *text)
 
 int init_result(RESULT& result, void*& data)
 {
+    return init_result_function(result, data);
+}
+
+static int init_result_gfn_llr(RESULT& result, void*& data)
+{
     int retval;
     vector<OUTPUT_FILE_INFO> files;
 
@@ -321,7 +369,12 @@ int init_result(RESULT& result, void*& data)
     return ERR_OPENDIR;
 }
 
-int compare_results(
+int compare_results(RESULT & r1, void* data1, RESULT const & r2, void* data2, bool& match)
+{
+    return compare_results_function(r1, data1, r2, data2, match);
+}
+
+static int compare_results_gfn_llr(
     RESULT       & r1, void* data1,
     RESULT const & r2, void* data2,
     bool& match
@@ -352,4 +405,60 @@ int cleanup_result(RESULT const& /*result*/, void* data)
     if (data)
         free(data);
     return 0;
+}
+
+/**********************************************
+ *
+ *  LLR2 support
+ *
+ **********************************************/
+
+#define OPAQUE_LLR2_CERT_CREATED      0x01
+#define OPAQUE_LLR2_CERT_VALID        0x02
+#define OPAQUE_LLR2_VALIDATE_ERROR    0x08
+
+static int init_result_llr2(RESULT& result, void*& data)
+{
+    unsigned opaq = result.opaque;
+    char query[MAX_QUERY_LEN];
+
+    data = NULL;
+
+    // fatal error set by external validator?
+    if (opaq & OPAQUE_LLR2_VALIDATE_ERROR)
+    {
+        log_messages.printf(MSG_CRITICAL, "[RESULT#%lu %s] marked bad by external validation\n", result.id, result.name);
+        return ERR_BAD_FORMAT; // whatever readable
+    }
+
+    // external validation successful?
+    if (opaq & OPAQUE_LLR2_CERT_VALID)
+    {
+        data = strdup("OK");  // whatever
+        return 0;
+    }
+
+    // external validation already requested. wait silently until it completes
+    if (opaq & OPAQUE_LLR2_CERT_CREATED)
+    {
+        return VAL_RESULT_NEED_MORE_WORK;
+    }
+
+    // Trigger BuildCert and stop validation until certificate is built
+    if (!dry_run)
+    {
+        // if need_action is negative, this mean error in processing - do not change
+        snprintf(query, sizeof(query), "UPDATE llr2 SET need_action=need_action+IF(need_action < 0, 0, 1) WHERE workunitid=%ld", result.workunitid);
+        if (boinc_db.do_query(query))
+            log_messages.printf(MSG_CRITICAL, "Failed to kick LLR2 table for WU %ld!\n", result.workunitid);
+        if (boinc_db.affected_rows() < 1)
+            log_messages.printf(MSG_CRITICAL, "No LLR2 entry found for WU %ld!\n", result.workunitid);
+    }
+    return VAL_RESULT_NEED_MORE_WORK;
+}
+
+
+static int compare_results_llr2(RESULT & r1, void* data1, RESULT const & r2, void* data2, bool& match)
+{
+    return compare_results_gfn_llr(r1, data1, r2, data2, match);
 }
