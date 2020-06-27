@@ -117,7 +117,7 @@ void usage(char *name) {
 // ERR_NOT_FOUND if dir is there but not file
 //
 int get_file_path(
-    const char *filename, char* upload_dir, int fanout, char* path
+    const char *filename, const char* upload_dir, int fanout, char* path
 ) {
     if (dir_hier_path(filename, upload_dir, fanout, path, false)) {
         return ERR_OPENDIR;
@@ -170,6 +170,10 @@ int wu_delete_files(WORKUNIT& wu) {
                     filename.c_str(), download_dir, config.uldl_dir_fanout,
                     path
                 );
+                // Hack for LLR2 hierarchy (try alternative location)
+                if (retval)
+                    retval = get_file_path(filename.c_str(), (string(download_dir) + "/llr2cert").c_str(), 10, path);
+                // end hack
                 if (retval == ERR_OPENDIR) {
                     log_messages.printf(MSG_CRITICAL,
                         "[WU#%lu] missing dir for %s\n",
